@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>会说话的奶龙 - Talking Nailong 3D</title>
+<style>
+  :root{
+    --sky-top:#8DE5FF;
+    --sky-bottom:#C8F4FF;
+    --grass:#8FDC6B;
+    --grass-dark:#6BC24A;
+    --gold:#FFD700;
+    --gold-dark:#E5B80B;
+    --btn-primary:#FF9F1C;
+    --btn-hover:#FF7B00;
+    --text:#4A3820;
+    --panel:rgba(255,255,255,.92);
+    --shadow:0 6px 20px rgba(0,0,0,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  #threeCanvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;z-index:0;}
+  #fxCanvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;z-index:5;pointer-events:none;}
+
+  /* 顶部金币条 */
+  #topBar{
+    position:absolute;top:0;left:0;right:0;height:52px;
+    background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.75));
+    display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+    z-index:10;backdrop-filter:blur(4px);
+  }
+  .coinPill{
+    background:linear-gradient(180deg,#FFEB3B,#FFC107);
+    border:2px solid #E5B80B;border-radius:999px;padding:5px 14px;
+    display:flex;align-items:center;gap:6px;font-weight:800;color:var(--text);
+    box-shadow:0 3px 0 #B8860B;font-size:16px;
+  }
+  .coinPill::before{content:"🪙";font-size:18px;}
+  .topBtn{
+    width:40px;height:40px;border-radius:50%;border:none;background:#fff;
+    box-shadow:var(--shadow);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s;
+  }
+  .topBtn:active{transform:scale(.9);}
+
+  /* 底部按钮面板 */
+  #controls{
+    position:absolute;bottom:0;left:0;right:0;padding:12px 14px 22px;
+    background:linear-gradient(180deg,transparent,rgba(255,255,255,.92) 22%);
+    display:flex;flex-direction:column;gap:10px;z-index:10;
+  }
+  .row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+  .bigBtn{
+    flex:1;min-width:80px;max-width:160px;height:52px;border:none;border-radius:16px;
+    background:linear-gradient(180deg,var(--btn-primary),var(--btn-hover));
+    color:#fff;font-size:16px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 0 #C45A00,0 6px 12px rgba(0,0,0,.15);
+    display:flex;align-items:center;justify-content:center;gap:5px;
+    transition:transform .08s,box-shadow .08s;
+  }
+  .bigBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #C45A00,0 2px 4px rgba(0,0,0,.15);}
+  .bigBtn.secondary{background:linear-gradient(180deg,#6BDAE2,#25A6B9);box-shadow:0 4px 0 #0C7285,0 6px 12px rgba(0,0,0,.15);}
+  .bigBtn.secondary:active{box-shadow:0 1px 0 #0C7285,0 2px 4px rgba(0,0,0,.15);}
+  .bigBtn.pink{background:linear-gradient(180deg,#FF8DA1,#E7546E);box-shadow:0 4px 0 #B03045,0 6px 12px rgba(0,0,0,.15);}
+  .bigBtn.pink:active{box-shadow:0 1px 0 #B03045,0 2px 4px rgba(0,0,0,.15);}
+
+  #micBtn.recording{animation:pulse 1.2s infinite;background:linear-gradient(180deg,#FF5252,#D32F2F);box-shadow:0 4px 0 #9A0007,0 6px 12px rgba(0,0,0,.15);}
+  @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.06);}100%{transform:scale(1);}}
+
+  .panel{position:absolute;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:30;padding:20px;}
+  .panel.active{display:flex;}
+  .panelCard{
+    background:var(--panel);border-radius:24px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;
+    box-shadow:var(--shadow);padding:18px;position:relative;
+  }
+  .panelHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .panelTitle{font-size:22px;font-weight:800;color:var(--text);}
+  .closeBtn{width:34px;height:34px;border-radius:50%;border:none;background:#F2F2F2;font-size:22px;cursor:pointer;}
+
+  .skinGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .skinItem{
+    border:3px solid #E0E0E0;border-radius:16px;padding:10px 6px;text-align:center;cursor:pointer;
+    background:#fff;position:relative;transition:transform .1s;
+  }
+  .skinItem.owned{border-color:#9CCC65;}
+  .skinItem.current{border-color:#FF9F1C;background:#FFF8E1;}
+  .skinItem:active{transform:scale(.95);}
+  .swatch{width:44px;height:44px;border-radius:50%;margin:0 auto 8px;box-shadow:0 3px 8px rgba(0,0,0,.15);}
+  .skinName{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .skinPrice{font-size:12px;color:#888;}
+  .lock{font-size:18px;position:absolute;right:6px;top:6px;}
+
+  .taskItem{
+    background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:10px;
+    display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);
+  }
+  .taskItem.done{opacity:.65;background:#F1F8E9;}
+  .taskInfo{flex:1;}
+  .taskTitle{font-weight:700;font-size:15px;color:var(--text);}
+  .taskDesc{font-size:12px;color:#777;}
+  .taskReward{background:linear-gradient(180deg,#FFEB3B,#FFC107);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;color:var(--text);}
+  .taskCheck{font-size:22px;color:#43A047;}
+
+  #toast{position:absolute;top:60px;left:50%;transform:translateX(-50%) translateY(-30px);opacity:0;pointer-events:none;background:rgba(0,0,0,.75);color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;z-index:40;transition:all .3s;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .floatCoin{position:absolute;pointer-events:none;font-weight:800;color:#FFD700;text-shadow:0 1px 2px rgba(0,0,0,.3);z-index:6;font-size:18px;}
+
+  .hint{position:absolute;top:60px;left:0;right:0;text-align:center;z-index:20;pointer-events:none;}
+  .hint span{display:inline-block;background:rgba(255,255,255,.92);color:var(--text);padding:8px 16px;border-radius:999px;font-size:13px;box-shadow:var(--shadow);}
+  #permissionMsg{display:none;}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;background:#bfe9ff;color:#4A3820;font-size:18px;font-weight:700;flex-direction:column;padding:24px;text-align:center;line-height:1.6;}
+
+  /* 设置面板 */
+  #settingsPanel .panelCard{ max-width:380px; }
+  .setRow{ display:flex; align-items:center; justify-content:space-between; padding:13px 2px; border-bottom:1px solid #f0f0f0; }
+  .setRow:last-child{ border-bottom:none; }
+  .setLabel{ font-size:15px; font-weight:700; color:var(--text); }
+  .setSub{ font-size:12px; color:#999; font-weight:400; margin-top:2px; }
+  .toggle{ width:50px; height:28px; border-radius:999px; background:#cfcfcf; position:relative; cursor:pointer; transition:background .2s; flex:none; }
+  .toggle.on{ background:#43A047; }
+  .toggle::after{ content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .toggle.on::after{ left:25px; }
+  .setBtn{ padding:9px 14px; border:none; border-radius:12px; background:#eee; color:var(--text); font-weight:700; cursor:pointer; font-size:14px; }
+
+  /* 新手引导 */
+  #guide{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:60; background:rgba(0,0,0,.55); padding:24px; }
+  #guide.active{ display:flex; }
+  .guideCard{ background:#fff; border-radius:24px; width:100%; max-width:340px; padding:26px 22px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.3); }
+  .guideEmoji{ font-size:56px; margin-bottom:8px; }
+  .guideTitle{ font-size:20px; font-weight:800; color:var(--text); margin-bottom:12px; }
+  .guideText{ font-size:15px; color:#555; line-height:1.7; margin-bottom:18px; }
+  .guideDots{ display:flex; gap:7px; justify-content:center; margin-bottom:18px; }
+  .guideDots span{ width:8px; height:8px; border-radius:50%; background:#ddd; }
+  .guideDots span.on{ background:var(--btn-primary); }
+  .guideBtns{ display:flex; gap:10px; }
+  .guideBtns button{ flex:1; padding:13px; border:none; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; }
+  .guideSkip{ background:#f0f0f0; color:#888; }
+  .guideNext{ background:linear-gradient(180deg,var(--btn-primary),var(--btn-hover)); color:#fff; }
+
+  /* 状态养成 HUD（饱腹/心情/精力） */
+  #statHud{ position:absolute; left:12px; top:58px; z-index:9; display:flex; flex-direction:column; gap:5px; pointer-events:none; }
+  .statItem{ display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.72); border-radius:999px; padding:3px 10px 3px 6px; box-shadow:0 2px 6px rgba(0,0,0,.10); backdrop-filter:blur(3px); transition:box-shadow .3s; }
+  .statIcon{ font-size:13px; width:16px; text-align:center; }
+  .statBar{ width:74px; height:8px; border-radius:999px; background:rgba(0,0,0,.13); overflow:hidden; }
+  .statBar i{ display:block; height:100%; width:80%; border-radius:999px; transition:width .35s linear; }
+  #barFull{ background:linear-gradient(90deg,#FFB74D,#FF9F1C); }
+  #barMood{ background:linear-gradient(90deg,#FF9BB0,#E7546E); }
+  #barEnergy{ background:linear-gradient(90deg,#7DE3EC,#25A6B9); }
+  .statItem.low{ animation:statWarn 1.1s infinite; }
+  .statItem.low .statIcon{ animation:pulse 1s infinite; }
+  @keyframes statWarn{ 0%,100%{ box-shadow:0 2px 6px rgba(0,0,0,.10); } 50%{ box-shadow:0 0 0 3px rgba(255,86,86,.55); } }
+
+  /* 小游戏：顶部计分 + 倒计时 + 提示条 */
+  #miniHud{ position:absolute; top:58px; left:50%; transform:translateX(-50%); z-index:20; display:none; gap:8px; }
+  #miniHud.on{ display:flex; }
+  .miniPill{ background:rgba(255,255,255,.94); border-radius:999px; padding:6px 14px; font-weight:800; color:var(--text); font-size:15px; box-shadow:var(--shadow); }
+  #miniTip{ position:absolute; bottom:14px; left:0; right:0; text-align:center; z-index:20; display:none; pointer-events:none; }
+  #miniTip.on{ display:block; }
+  #miniTip span{ display:inline-block; background:rgba(0,0,0,.62); color:#fff; padding:8px 16px; border-radius:999px; font-size:14px; font-weight:600; }
+  #miniCount{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:45; pointer-events:none; }
+  #miniCount.on{ display:flex; }
+  #miniCount b{ font-size:104px; color:#fff; font-weight:900; text-shadow:0 6px 26px rgba(0,0,0,.45); }
+  body.mini #controls{ display:none; }
+  body.mini .hint{ display:none; }
+  .miniRow{ display:flex; gap:10px; margin-top:14px; }
+  .miniRow button{ flex:1; padding:13px; border:none; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; }
+  .miniStart{ background:linear-gradient(180deg,var(--btn-primary),var(--btn-hover)); color:#fff; }
+  .miniQuit{ background:#f0f0f0; color:#888; }
+  .miniRules{ font-size:14px; color:#555; line-height:1.95; }
+  .miniResult{ text-align:center; font-size:15px; color:#666; line-height:2.1; }
+  .miniResult b{ color:#FF7B00; }
+
+  /* 移动端适配 */
+  @media (max-width:480px){
+    #topBar{ height:46px; padding:0 10px; }
+    .topBtn{ width:36px; height:36px; font-size:18px; }
+    .bigBtn{ min-width:62px; height:48px; font-size:14px; padding:0 8px; }
+    .coinPill{ font-size:14px; padding:4px 10px; }
+    .hint span{ font-size:12px; }
+    .guideCard{ padding:22px 18px; }
+    #statHud{ left:8px; top:50px; gap:4px; }
+    .statItem{ padding:2px 8px 2px 5px; }
+    .statBar{ width:54px; height:7px; }
+    #miniHud{ top:50px; gap:6px; }
+    .miniPill{ font-size:13px; padding:5px 10px; }
+    #miniCount b{ font-size:78px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="threeCanvas"></canvas>
+<canvas id="fxCanvas"></canvas>
+
+<div class="hint" id="hintBox"><span id="hintText">点奶龙的头、肚子、小手或脚，会有不同反应哦～</span></div>
+
+<div id="topBar">
+  <div style="display:flex;gap:10px;">
+    <button class="topBtn" id="btnShop" title="皮肤商城">👕</button>
+    <button class="topBtn" id="btnTasks" title="任务">📋</button>
+    <button class="topBtn" id="btnScene" title="切换场景">🌇</button>
+    <button class="topBtn" id="btnMini" title="小游戏">🎮</button>
+    <button class="topBtn" id="btnSettings" title="设置">⚙</button>
+  </div>
+  <div class="coinPill" id="coinDisplay">0</div>
+</div>
+
+<div id="statHud">
+  <div class="statItem" id="statFull"><span class="statIcon">🍚</span><div class="statBar"><i id="barFull"></i></div></div>
+  <div class="statItem" id="statMood"><span class="statIcon">😊</span><div class="statBar"><i id="barMood"></i></div></div>
+  <div class="statItem" id="statEnergy"><span class="statIcon">⚡</span><div class="statBar"><i id="barEnergy"></i></div></div>
+</div>
+
+<div id="controls">
+  <div class="row">
+    <button class="bigBtn" id="micBtn">🎤 说话</button>
+    <button class="bigBtn pink" id="laughBtn">😂 大笑</button>
+    <button class="bigBtn secondary" id="waveBtn">👋 打招呼</button>
+  </div>
+  <div class="row">
+    <button class="bigBtn secondary" id="pokeBtn">👆 戳一戳</button>
+    <button class="bigBtn" id="feedBtn">🍌 喂食</button>
+    <button class="bigBtn pink" id="restBtn">😴 休息</button>
+  </div>
+</div>
+
+<div id="miniHud">
+  <div class="miniPill">🏆 <b id="miniScore">0</b></div>
+  <div class="miniPill">⏱ <b id="miniTime">40</b></div>
+  <div class="miniPill">❤️ <b id="miniLife">3</b></div>
+</div>
+<div id="miniTip"><span id="miniTipText">拖动奶龙 / 按 ← → 移动</span></div>
+<div id="miniCount"><b>3</b></div>
+
+<div id="permissionMsg" class="hint"><span id="permText">请允许麦克风权限，奶龙才能学你说话～</span></div>
+
+<div class="panel" id="shopPanel">
+  <div class="panelCard">
+    <div class="panelHead">
+      <div class="panelTitle">👕 奶龙衣橱</div>
+      <button class="closeBtn" data-close="shopPanel">×</button>
+    </div>
+    <div class="skinGrid" id="skinGrid"></div>
+  </div>
+</div>
+
+<div class="panel" id="taskPanel">
+  <div class="panelCard">
+    <div class="panelHead">
+      <div class="panelTitle">📋 挑战任务</div>
+      <button class="closeBtn" data-close="taskPanel">×</button>
+    </div>
+    <div id="taskList"></div>
+  </div>
+</div>
+
+<div class="panel" id="settingsPanel">
+  <div class="panelCard">
+    <div class="panelHead">
+      <div class="panelTitle">⚙ 设置</div>
+      <button class="closeBtn" data-close="settingsPanel">×</button>
+    </div>
+    <div class="setRow">
+      <div><div class="setLabel">音效</div><div class="setSub">互动与提示声音</div></div>
+      <div class="toggle" id="tgSound"></div>
+    </div>
+    <div class="setRow">
+      <div><div class="setLabel">低性能模式</div><div class="setSub">关闭阴影与粒子，更流畅</div></div>
+      <div class="toggle" id="tgPerf"></div>
+    </div>
+    <div class="setRow">
+      <div><div class="setLabel">全屏</div><div class="setSub">沉浸游玩</div></div>
+      <button class="setBtn" id="btnFullscreen">进入全屏</button>
+    </div>
+  </div>
+</div>
+
+<div id="guide">
+  <div class="guideCard">
+    <div class="guideEmoji" id="guideEmoji">🐲</div>
+    <div class="guideTitle" id="guideTitle">欢迎来到会说话的奶龙</div>
+    <div class="guideText" id="guideText"></div>
+    <div class="guideDots" id="guideDots"></div>
+    <div class="guideBtns">
+      <button class="guideSkip" id="guideSkip">跳过</button>
+      <button class="guideNext" id="guideNext">下一步</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="miniPanel">
+  <div class="panelCard">
+    <div class="panelHead">
+      <div class="panelTitle">🎮 接食物</div>
+      <button class="closeBtn" data-close="miniPanel">×</button>
+    </div>
+    <div class="miniRules">
+      🍌 左右移动奶龙，接住掉下来的食物；<br>
+      🪨 躲开石头、炸弹和辣椒，砸中会掉血；<br>
+      ⏱ 每局 40 秒，生命 3 颗，时间到或掉光就结算；<br>
+      🏆 得分越高，金币奖励越多（还能涨心情）。
+    </div>
+    <div class="miniRow">
+      <button class="miniQuit" data-close="miniPanel">先不玩</button>
+      <button class="miniStart" id="miniStart">开始游戏</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="miniOver">
+  <div class="panelCard">
+    <div class="panelHead">
+      <div class="panelTitle">🎮 本局结算</div>
+      <button class="closeBtn" data-close="miniOver">×</button>
+    </div>
+    <div class="miniResult">
+      得分 <b id="miniScoreVal" style="font-size:28px;">0</b><br>
+      获得金币 <b id="miniCoinVal">0</b> 🪙<br>
+      <span style="font-size:13px;color:#999;">历史最佳 <b id="miniBestVal" style="color:#999;">0</b></span>
+    </div>
+    <div class="miniRow">
+      <button class="miniQuit" data-close="miniOver">关闭</button>
+      <button class="miniStart" id="miniAgain">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="loading">奶龙加载中…</div>
+
+<script>
+/* ===================== Three.js（UMD 内联，免 import，file:// 双击即可运行） ===================== */
+__THREE_SRC__
+</script>
+<script>
+/* ===================== GLTFLoader（UMD 内联，加载美术 GLB 模型） ===================== */
+__GLTF_SRC__
+</script>
+<script>
+
+/* ===================== 常量 ===================== */
+const SKINS = [
+  { id: 'classic',    name: '经典黄',   price: 0,   tint: false, body: ['#FFE44D','#FFD100','#F5B800'], belly: ['#FFF8DC','#FFEBB7'], horn: '#FFE4B5', cheek: '#FF7782', accent: '#FFD100', costume: 'none'  },
+  { id: 'strawberry', name: '草莓粉',   price: 80,  tint: true,  body: ['#FFDCE8','#FFA8C4','#E07A9E'], belly: ['#FFE4EC','#FFC9D6'], horn: '#FFD1DC', cheek: '#FF6B8A', accent: '#FF4F8B', costume: 'bow'   },
+  { id: 'mint',       name: '薄荷绿',   price: 100, tint: true,  body: ['#E0FBE2','#9DE7AE','#5FB877'], belly: ['#E8FFF2','#C4F5DA'], horn: '#D1F2E0', cheek: '#FF8DA1', accent: '#2FBF73', costume: 'leaf'  },
+  { id: 'galaxy',     name: '星空紫',   price: 150, tint: true,  body: ['#E2D8FA','#B296F4','#6E52BC'], belly: ['#F3E5F5','#E1BEE7'], horn: '#E0D4FC', cheek: '#FF8DA1', accent: '#9B5CFF', costume: 'star'  },
+  { id: 'fire',       name: '火焰红',   price: 120, tint: true,  body: ['#FFDCB4','#FFA45C','#CE6B22'], belly: ['#FFEBEE','#FFCDD2'], horn: '#FFCCBC', cheek: '#FF6B6B', accent: '#FF3D2E', costume: 'flame' },
+  { id: 'gold',       name: '黄金限定', price: 300, tint: true,  body: ['#FFF6BC','#FFCE2E','#C08700'], belly: ['#FFF9C4','#FFF59D'], horn: '#FFE082', cheek: '#FFB74D', accent: '#FFC107', costume: 'crown' }
+];
+
+const TASKS = [
+  { id: 'laugh5',  title: '大笑大师', desc: '让奶龙大笑 5 次',     reward: 20, target: 5,  key: 'laugh' },
+  { id: 'speak1',  title: '复读小龙', desc: '录一句话让奶龙复述', reward: 30, target: 1,  key: 'speak' },
+  { id: 'skin1',   title: '时尚达人', desc: '给奶龙换一次皮肤',   reward: 20, target: 1,  key: 'skinChange' },
+  { id: 'poke10',  title: '戳戳乐',   desc: '戳奶龙 10 下',        reward: 30, target: 10, key: 'poke' },
+  { id: 'feed5',   title: '干饭王',   desc: '喂奶龙吃东西 5 次',   reward: 40, target: 5,  key: 'feed' },
+  { id: 'wave5',   title: '社交达人', desc: '跟奶龙挥手 5 次',     reward: 25, target: 5,  key: 'wave' },
+  { id: 'jump5',   title: '跳跳虎',   desc: '让奶龙蹦跳 5 次',     reward: 25, target: 5,  key: 'jump' },
+  { id: 'head5',   title: '摸头怪',   desc: '摸奶龙头 5 次',       reward: 20, target: 5,  key: 'head' },
+  { id: 'belly5',  title: '捧腹狂魔', desc: '让奶龙捧腹 5 次',     reward: 30, target: 5,  key: 'belly' },
+  { id: 'scene3',  title: '环球旅行', desc: '切换背景 3 次',       reward: 35, target: 3,  key: 'scene' },
+  { id: 'rest3',   title: '养生达人', desc: '让奶龙休息 3 次',     reward: 25, target: 3,  key: 'rest' },
+  { id: 'mini1',   title: '游戏新星', desc: '完成 1 局接食物小游戏', reward: 30, target: 1,  key: 'minigame' },
+  { id: 'catch20', title: '接食高手', desc: '小游戏中接住 20 个食物', reward: 45, target: 20, key: 'catch' }
+];
+
+const FOODS = [
+  { emoji: '🍌' }, { emoji: '🍎' }, { emoji: '🍩' }, { emoji: '🐟' }, { emoji: '🍓' }, { emoji: '🍪' }
+];
+
+const THEMES = [
+  { name: '晴空草地', top: '#8DE5FF', bottom: '#C8F4FF', ground: '#8FDC6B', decor: 'none' },
+  { name: '星空夜晚', top: '#0B1030', bottom: '#2A2A55', ground: '#3A3A66', decor: 'stars' },
+  { name: '阳光海滩', top: '#7FE3FF', bottom: '#BFF4FF', ground: '#F4E2B0', decor: 'none' },
+  { name: '梦幻糖果', top: '#FFD6F0', bottom: '#FFE9C7', ground: '#FFC7E0', decor: 'none' },
+  { name: '浩瀚太空', top: '#05060F', bottom: '#191A3A', ground: '#23244A', decor: 'space' }
+];
+
+/* ===================== 工具 ===================== */
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const TAU = Math.PI * 2;
+function hexA(hex, a){
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ===================== 状态 ===================== */
+const SAVE_KEY = 'nailong3d_save_v1';
+let save = { coins: 0, currentSkin: 'classic', owned: ['classic'], tasks: {}, scene: 0, lastDaily: '', tutorialDone: false, sound: true, lowPerf: false, stats: null, statsAt: 0, miniBest: 0 };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) save = Object.assign(save, s); } catch (e) {}
+let settings = { sound: save.sound !== false, lowPerf: !!save.lowPerf };
+
+/* ===================== 状态养成：饱腹 / 心情 / 精力 ===================== */
+const STAT_DECAY = { full: 0.35, energy: 0.20, mood: 0.15 };   // 「每秒」自然下降
+let stats = Object.assign({ full: 82, mood: 76, energy: 88 }, save.stats || {});
+stats.full = clamp(stats.full, 0, 100); stats.mood = clamp(stats.mood, 0, 100); stats.energy = clamp(stats.energy, 0, 100);
+/* 离线衰减：回来时奶龙会有点饿/有点困，但最多按 8 小时算 */
+(function offlineDecay(){
+  const last = save.statsAt || 0;
+  if (!last) return;
+  const mins = clamp((Date.now() - last) / 60000, 0, 480);
+  if (mins < 0.5) return;
+  stats.full   = clamp(stats.full   - mins * 1.0,  0, 100);
+  stats.energy = clamp(stats.energy - mins * 0.6,  0, 100);
+  stats.mood   = clamp(stats.mood   - mins * 0.45, 0, 100);
+})();
+function addStat(k, v){ stats[k] = clamp(stats[k] + v, 0, 100); }
+
+/* 小游戏状态（接食物） */
+let mini = null;
+let miniBest = save.miniBest || 0;
+/* 每日签到：每天首次打开额外送 40 币，让攒皮肤更快 */
+(function checkDaily(){
+  try {
+    const today = new Date().toDateString();
+    if (save.lastDaily !== today){ save.lastDaily = today; gainCoins(40); showToast('每日签到 +40🪙'); }
+  } catch (e) {}
+})();
+
+let state = {
+  idle: { sleeping: false, yawn: 0, t: 0 },
+  blinkT: 0,
+  feed: null,
+  recording: false,
+  particles: [],
+  scene: save.scene || 0,
+  currentSkin: save.currentSkin || 'classic',
+  taskProgress: Object.assign({}, save.tasks)
+};
+let dragon = { x: 0.5, y: 0.58, scale: 1, anim: 'idle', animT: 0, face: 'happy' };
+let _feedIdx = 0;
+
+function skin(){ return SKINS.find(s => s.id === state.currentSkin) || SKINS[0]; }
+function persist(){ save = { coins: save.coins, currentSkin: state.currentSkin, owned: save.owned, tasks: state.taskProgress, scene: state.scene, tutorialDone: save.tutorialDone, sound: settings.sound, lowPerf: settings.lowPerf,
+  stats: { full: Math.round(stats.full * 10) / 10, mood: Math.round(stats.mood * 10) / 10, energy: Math.round(stats.energy * 10) / 10 },
+  statsAt: Date.now(), miniBest: miniBest }; localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
+
+/* ===================== 音频 ===================== */
+const LAUGH_AUDIO_SRC = "__LAUGH__";
+let actx = null;
+function audio(){ if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+function popSound(){ if (!settings.sound) return; try { const c = audio(); const o = c.createOscillator(), g = c.createGain(); o.type='triangle'; o.frequency.setValueAtTime(660,c.currentTime); o.frequency.exponentialRampToValueAtTime(880,c.currentTime+0.08); g.gain.setValueAtTime(0.18,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.18); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+0.2); } catch(e){} }
+function eatSound(){ if (!settings.sound) return; try { const c = audio(); const o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.setValueAtTime(300,c.currentTime); o.frequency.exponentialRampToValueAtTime(140,c.currentTime+0.15); g.gain.setValueAtTime(0.22,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.2); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+0.22); } catch(e){} }
+function levelUpSound(){ if (!settings.sound) return; try { const c=audio(); [523,659,784,1046].forEach((f,i)=>{ const o=c.createOscillator(),g=c.createGain(); o.type='square'; o.frequency.value=f; const t=c.currentTime+i*0.09; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.2,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.18); o.connect(g).connect(c.destination); o.start(t); o.stop(t+0.2); }); } catch(e){} }
+function synthLaugh(){ if (!settings.sound) return; try { const c=audio(); const o=c.createOscillator(),g=c.createGain(); o.type='sawtooth'; const t0=c.currentTime; for(let i=0;i<5;i++){ const t=t0+i*0.12; o.frequency.setValueAtTime(420,t); o.frequency.linearRampToValueAtTime(300,t+0.1); } g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.18,t0+0.05); g.gain.linearRampToValueAtTime(0.001,t0+0.6); o.connect(g).connect(c.destination); o.start(t0); o.stop(t0+0.65); } catch(e){} }
+function playLaughClip(times){
+  if (!settings.sound) return;
+  try {
+    if (!LAUGH_AUDIO_SRC) throw new Error('no clip');
+    for (let i = 0; i < times; i++){
+      const a = new Audio(LAUGH_AUDIO_SRC);
+      a.addEventListener('error', () => synthLaugh());
+      setTimeout(() => { a.play().catch(() => synthLaugh()); }, i * 480);
+    }
+  } catch(e){ synthLaugh(); }
+}
+
+/* ===================== Three.js 场景 ===================== */
+const threeCanvas = document.getElementById('threeCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0.35, 5.3);
+camera.lookAt(0, 0.1, 0);
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x9aa0b5, 0.95);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 1.05);
+key.position.set(-2.5, 4, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.near = 1; key.shadow.camera.far = 20;
+key.shadow.camera.left = -5; key.shadow.camera.right = 5; key.shadow.camera.top = 5; key.shadow.camera.bottom = -5;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xfff0d0, 0.5);
+rim.position.set(-3, 2, -2);
+scene.add(rim);
+const fill = new THREE.DirectionalLight(0xfff8e7, 0.75);
+fill.position.set(-4, 2, 3);
+scene.add(fill);
+
+/* 背景：天空渐变 + 地面 + 装饰 */
+let skyTex = null;
+const ground = new THREE.Mesh(new THREE.CircleGeometry(7, 64), new THREE.MeshStandardMaterial({ color: 0x8FDC6B, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -1.3;
+ground.receiveShadow = true;
+scene.add(ground);
+
+let decorGroup = new THREE.Group();
+scene.add(decorGroup);
+
+function makeSky(top, bottom){
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  const g = c.getContext('2d'); const grd = g.createLinearGradient(0, 0, 0, 256);
+  grd.addColorStop(0, top); grd.addColorStop(1, bottom); g.fillStyle = grd; g.fillRect(0, 0, 4, 256);
+  const tex = new THREE.CanvasTexture(c);
+  if ('colorSpace' in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+  else if ('encoding' in tex && THREE.sRGBEncoding !== undefined) tex.encoding = THREE.sRGBEncoding;
+  return tex;
+}
+function buildDecor(type){
+  while (decorGroup.children.length) decorGroup.remove(decorGroup.children[0]);
+  if (type === 'stars' || type === 'space'){
+    const n = type === 'space' ? 500 : 260;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++){
+      const r = 12 + Math.random() * 14;
+      const th = Math.random() * TAU, ph = Math.acos(2 * Math.random() - 1);
+      pos[i*3]   = r * Math.sin(ph) * Math.cos(th);
+      pos[i*3+1] = Math.abs(r * Math.cos(ph)) * 0.6 + 1;
+      pos[i*3+2] = r * Math.sin(ph) * Math.sin(th);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0xffffff, size: type==='space'?0.18:0.12, sizeAttenuation: true, transparent: true, opacity: 0.9 });
+    decorGroup.add(new THREE.Points(geo, mat));
+  }
+  if (type === 'space'){
+    const planet = new THREE.Mesh(new THREE.SphereGeometry(1.1, 32, 32), new THREE.MeshStandardMaterial({ color: 0x7C5CFF, roughness: 0.8, emissive: 0x2a1a66, emissiveIntensity: 0.4 }));
+    planet.position.set(-3.5, 3.2, -8); scene.add(planet); decorGroup.add(planet);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.7, 48), new THREE.MeshBasicMaterial({ color: 0xC9B6FF, side: THREE.DoubleSide, transparent: true, opacity: 0.6 }));
+    ring.position.copy(planet.position); ring.rotation.x = 1.2; scene.add(ring); decorGroup.add(ring);
+  }
+}
+function applyTheme(i){
+  const th = THEMES[i];
+  if (skyTex) skyTex.dispose();
+  skyTex = makeSky(th.top, th.bottom);
+  scene.background = skyTex;
+  ground.material.color.set(th.ground);
+  buildDecor(th.decor);
+}
+
+/* ===================== 构建 3D 奶龙 ===================== */
+const dragon3d = new THREE.Group();
+scene.add(dragon3d);
+
+function mat(color, opts){ return new THREE.MeshStandardMaterial(Object.assign({ color: new THREE.Color(color), roughness: 0.55, metalness: 0.05 }, opts || {})); }
+
+const bodyMat   = mat('#FFD100');
+const headMat   = mat('#FFD100');
+const bellyMat  = mat('#FFF1C0');
+const handMat   = mat('#3A3A3A', { roughness: 0.7 });
+const blackMat  = mat('#2A1D08');
+const whiteMat  = mat('#ffffff', { roughness: 0.4 });
+const irisMat   = mat('#5BBF3A');
+const blushMat  = new THREE.MeshStandardMaterial({ color: new THREE.Color(skin().cheek), roughness: 0.6, transparent: true, opacity: 0.85 });
+const blueMat   = mat('#3DA5D6');
+const orangeMat = mat('#FF8A33');
+const ballSeam  = mat('#7a3b12', { roughness: 0.7 });
+const tongueMat = mat('#FF8DA1');
+const accentMat = mat(skin().accent, { metalness: 0.3, roughness: 0.4 });
+
+const bodyGroup = new THREE.Group();   // 身体+四肢+服饰
+const headGroup = new THREE.Group();   // 头+五官+篮球（喂食时放大）
+dragon3d.add(bodyGroup);
+dragon3d.add(headGroup);
+
+// 身体
+const body = new THREE.Mesh(new THREE.SphereGeometry(0.95, 48, 48), bodyMat);
+body.scale.set(1.0, 1.12, 0.95);
+body.position.y = 0;
+body.castShadow = true; bodyGroup.add(body);
+// 肚皮（浅色前片）
+const belly = new THREE.Mesh(new THREE.SphereGeometry(0.78, 40, 40), bellyMat);
+belly.scale.set(0.92, 1.05, 0.7);
+belly.position.set(0, -0.02, 0.42);
+belly.castShadow = true; bodyGroup.add(belly);
+// 背带裤（蓝色）：两条肩带 + 腰带
+const strapL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.0, 0.18), blueMat); strapL.position.set(-0.34, 0.25, 0.78); strapL.rotation.z = 0.12; bodyGroup.add(strapL);
+const strapR = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.0, 0.18), blueMat); strapR.position.set(0.34, 0.25, 0.78); strapR.rotation.z = -0.12; bodyGroup.add(strapR);
+const belt = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 0.95), blueMat); belt.position.set(0, -0.55, 0.45); belt.scale.set(1,1,0.7); bodyGroup.add(belt);
+
+// 脚
+[-1, 1].forEach(s => {
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.32, 32, 32), bodyMat);
+  foot.scale.set(1, 0.8, 1.2); foot.position.set(s * 0.38, -1.0, 0.32); foot.castShadow = true; bodyGroup.add(foot);
+});
+
+// 手臂 + 灰黑小手
+const arms = [], hands = [];
+[-1, 1].forEach(s => {
+  const arm = new THREE.Group();
+  arm.position.set(s * 0.92, 0.5, 0.15);
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.5, 8, 16), bodyMat);
+  upper.position.set(0, -0.3, 0); upper.castShadow = true; arm.add(upper);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 24), handMat);
+  hand.position.set(0, -0.62, 0.05); hand.castShadow = true; arm.add(hand);
+  bodyGroup.add(arm);
+  arms.push(arm); hands.push(hand);
+});
+
+// ---- 头部 ----
+headGroup.position.y = 1.2;
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.72, 48, 48), headMat);
+head.castShadow = true; headGroup.add(head);
+
+// 篮球（头顶招牌）
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 32), orangeMat);
+ball.position.set(0, 0.78, -0.02);
+ball.castShadow = true; headGroup.add(ball);
+[0, 1].forEach(k => {
+  const seam = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.022, 12, 40), ballSeam);
+  if (k === 0) seam.rotation.y = Math.PI / 2;
+  ball.add(seam);
+});
+// 篮球竖向缝
+const seamV = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.022, 12, 40), ballSeam);
+seamV.position.y = -0.0001; headGroup.add(seamV); seamV.position.set(0, 0.78, -0.02);
+
+// 眼睛
+const eyes = [];
+[-1, 1].forEach(s => {
+  const eg = new THREE.Group();
+  eg.position.set(s * 0.27, 0.06, 0.6);
+  const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), whiteMat); eg.add(sclera);
+  const iris = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), irisMat); iris.position.z = 0.12; eg.add(iris);
+  const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 20), blackMat); pupil.position.z = 0.2; eg.add(pupil);
+  const hi = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 12), whiteMat); hi.position.set(-0.04, 0.05, 0.26); eg.add(hi);
+  headGroup.add(eg); eyes.push(eg);
+});
+// 眉毛
+const brows = [];
+[-1, 1].forEach(s => {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.06), blackMat);
+  b.position.set(s * 0.27, 0.32, 0.62);
+  headGroup.add(b); brows.push(b);
+});
+// 腮红
+[-1, 1].forEach(s => {
+  const bl = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 24), blushMat);
+  bl.scale.set(1, 0.7, 0.4); bl.position.set(s * 0.45, -0.12, 0.56); headGroup.add(bl);
+});
+// 嘴：微笑弧 + 张嘴
+const mouthSmile = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.028, 10, 24, Math.PI), blackMat);
+mouthSmile.position.set(0, -0.22, 0.66); mouthSmile.rotation.z = Math.PI; headGroup.add(mouthSmile);
+const mouthOpen = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), blackMat);
+mouthOpen.position.set(0, -0.22, 0.62); mouthOpen.scale.set(1, 0.2, 0.7); headGroup.add(mouthOpen);
+const tongue = new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 20), tongueMat);
+tongue.position.set(0, -0.27, 0.66); tongue.scale.set(1, 0.6, 0.6); headGroup.add(tongue);
+
+// 嘴锚点（用于投喂食物定位）
+const mouthAnchor = new THREE.Object3D();
+mouthAnchor.position.set(0, -0.22, 0.7); headGroup.add(mouthAnchor);
+
+// 配饰（按皮肤切换）
+const costume = {
+  bow: null, leaf: null, star: null, flame: null, crown: null
+};
+(function buildCostume(){
+  // 蝴蝶结
+  const bow = new THREE.Group();
+  const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 20), accentMat); b1.scale.set(1, 0.7, 0.4);
+  const b2 = b1.clone(); b1.position.x = -0.2; b2.position.x = 0.2;
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), accentMat);
+  bow.add(b1, b2, knot); bow.position.set(0.62, 0.5, 0.5); bow.rotation.z = 0.3; costume.bow = bow; headGroup.add(bow);
+  // 叶子
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 20), accentMat);
+  leaf.scale.set(0.5, 1, 0.15); leaf.position.set(0.3, 0.7, 0.2); leaf.rotation.z = -0.6; costume.leaf = leaf; headGroup.add(leaf);
+  // 星星（胸口）
+  const star = new THREE.Mesh(new THREE.SphereGeometry(0.16, 5, 5), accentMat);
+  star.scale.set(1, 1, 0.3); star.position.set(0, 0.0, 0.92); costume.star = star; bodyGroup.add(star);
+  // 火焰
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5, 16), accentMat);
+  flame.position.set(0, 1.35, 0); costume.flame = flame; headGroup.add(flame);
+  // 皇冠（额前小皇冠）
+  const crown = new THREE.Group();
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 20, 1, true), accentMat);
+  crown.add(band);
+  for (let i = -1; i <= 1; i++){
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 12), accentMat);
+    spike.position.set(i * 0.16, 0.14, 0); crown.add(spike);
+  }
+  crown.position.set(0, 0.5, 0.55); crown.rotation.x = 0.2; costume.crown = crown; headGroup.add(crown);
+})();
+function showCostume(kind){
+  Object.keys(costume).forEach(k => { if (costume[k]) costume[k].visible = (k === kind); });
+}
+
+function applySkin(sk){
+  bodyMat.color.set(sk.body[1]);
+  headMat.color.set(sk.body[1]);
+  bellyMat.color.set(sk.belly[1]);
+  blushMat.color.set(sk.cheek);
+  accentMat.color.set(sk.accent);
+  dragon3d.scale.setScalar(1);
+  showCostume(sk.costume === 'none' ? null : sk.costume);
+}
+
+/* ===================== 动画驱动 ===================== */
+function setEyeOpen(o){
+  o = clamp(o, 0, 1.3);
+  eyes.forEach(e => { e.scale.set(1, o, 1); });
+}
+function setMouth(open){
+  const op = clamp(open, 0, 1.3);
+  const smiling = op < 0.28;
+  mouthSmile.visible = smiling;
+  mouthOpen.visible = !smiling;
+  tongue.visible = !smiling && op > 0.4;
+  mouthOpen.scale.set(1, 0.18 + op * 0.9, 0.7);
+  tongue.position.y = -0.22 - op * 0.05;
+}
+function setBrows(lift){
+  brows.forEach((b, i) => { b.position.y = 0.32 + lift; });
+}
+
+function updateDragon(t){
+  const a = dragon.anim, at = dragon.animT;
+  let bob = Math.sin(t * 0.002) * 0.05;
+  let breathe = 1 + Math.sin(t * 0.003) * 0.025;
+  let rotZ = 0, rotX = 0, rotY = 0, jump = 0, headTilt = 0;
+  let mouthOpen = 0.12, eyeOpen = 1, browLift = 0, armWave = 0, hug = 0;
+
+  if (a === 'idle'){ /* base */ }
+  else if (a === 'nod'){ headTilt = Math.sin(at * 0.18) * 0.32; }
+  else if (a === 'wave'){ armWave = Math.sin(at * 0.18) * 0.7; }
+  else if (a === 'jump'){ jump = Math.abs(Math.sin(at * 0.14)) * 0.55; }
+  else if (a === 'wobble' || a === 'shake'){ rotZ = Math.sin(at * 0.4) * 0.16; }
+  else if (a === 'spin'){ rotY = at * 0.08; }
+  else if (a === 'laugh'){ rotZ = Math.sin(at * 0.4) * 0.09; rotX = -0.1; headTilt = -0.08; hug = 1; mouthOpen = 0.6 + Math.abs(Math.sin(at * 0.3)) * 0.35; eyeOpen = 0.28; browLift = 0.14; }
+
+  // 表情叠加
+  if (dragon.face === 'surprise'){ eyeOpen = 1.25; mouthOpen = Math.max(mouthOpen, 0.45); browLift = 0.26; }
+  else if (dragon.face === 'sleep'){ eyeOpen = 0.04; mouthOpen = Math.min(mouthOpen, 0.1); browLift = 0; }
+  else if (dragon.face === 'talk'){ mouthOpen = 0.3 + Math.abs(Math.sin(t * 0.02)) * 0.45; }
+  else if (dragon.face === 'laugh'){ eyeOpen = Math.min(eyeOpen, 0.3); mouthOpen = Math.max(mouthOpen, 0.7 + Math.abs(Math.sin(t * 0.02)) * 0.25); }
+
+  // 喂食时间线
+  if (state.feed){
+    const f = state.feed;
+    const p = clamp(f.t / 42, 0, 1);
+    mouthOpen = Math.max(mouthOpen, p * 0.9);
+    const chew = (f.t > 44 && f.t < 80) ? (0.6 + Math.abs(Math.sin(f.t * 0.4)) * 0.3) : 0;
+    const grow = clamp((f.t - 44) / 18, 0, 1) * 0.55 + chew * 0.4;
+    headGroup.scale.setScalar(1 + grow);
+    breathe = 1; bob = 0;
+    // 整体放大（背景后退）
+    dragon3d.scale.setScalar(lerp(1, 1.5, clamp((f.t - 30) / 40, 0, 1)));
+  } else {
+    headGroup.scale.setScalar(1);
+    dragon3d.scale.setScalar(1);
+  }
+
+  // 眨眼
+  if (state.blinkT > 0){ eyeOpen = 0.05; }
+
+  dragon3d.position.y = -0.1 + bob - jump;
+  dragon3d.rotation.z = rotZ;
+  dragon3d.rotation.x = rotX;
+  dragon3d.rotation.y = rotY;
+  bodyGroup.scale.y = breathe;
+  headGroup.rotation.x = headTilt;
+
+  setEyeOpen(eyeOpen);
+  setMouth(mouthOpen);
+  setBrows(browLift);
+
+  // 手臂
+  const hugX = hug * 0.9;
+  arms[0].rotation.z = -armWave - hug * 0.9;
+  arms[1].rotation.z =  armWave + hug * 0.9;
+  arms[0].rotation.x = hugX; arms[1].rotation.x = hugX;
+}
+
+/* ===================== 2D 粒子层（金币/泪/碎屑/食物） ===================== */
+const fx = document.getElementById('fxCanvas');
+const fxc = fx.getContext('2d');
+function resize(){
+  const W = window.innerWidth, H = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  threeCanvas.width = W * dpr; threeCanvas.height = H * dpr; threeCanvas.style.width = W + 'px'; threeCanvas.style.height = H + 'px';
+  fx.width = W * dpr; fx.height = H * dpr; fx.style.width = W + 'px'; fx.style.height = H + 'px';
+  fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  renderer.setSize(W, H, false);
+  camera.aspect = W / H; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+const _v = new THREE.Vector3();
+const _sv = new THREE.Vector3();
+function getMouthWorld(){
+  mouthAnchor.getWorldPosition(_v); _v.project(camera);
+  const W = window.innerWidth, H = window.innerHeight;
+  return { x: (_v.x * 0.5 + 0.5) * W, y: (-_v.y * 0.5 + 0.5) * H };
+}
+function addCoins(n, x, y){
+  const el = document.createElement('div'); el.className = 'floatCoin'; el.textContent = '+' + n + ' 🪙';
+  el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el);
+  let p = 0; const iv = setInterval(() => { p += 0.04; el.style.top = (y - p * 60) + 'px'; el.style.opacity = (1 - p); if (p >= 1){ clearInterval(iv); el.remove(); } }, 16);
+  save.coins += n; document.getElementById('coinDisplay').textContent = save.coins; persist();
+}
+/* 静默加币（不飘字），用于高频交互/每日签到，让刷金币更快 */
+function gainCoins(n){ if (!n) return; save.coins += n; const d = document.getElementById('coinDisplay'); if (d) d.textContent = save.coins; persist(); }
+function spawnTears(){
+  if (window.__lowPerf) return;
+  for (let i = 0; i < 7; i++) state.particles.push({ x: rand(-40, 40), y: rand(-30, 0), vx: rand(-1.5, 1.5), vy: rand(-2, -0.5), life: 1, type: 'tear' });
+}
+function spawnCrumbs(){
+  if (window.__lowPerf) return;
+  const m = getMouthWorld();
+  for (let i = 0; i < 7; i++) state.particles.push({ x: m.x, y: m.y, vx: rand(-2.5, 2.5), vy: rand(-3.5, -1), life: 1, type: 'crumb' });
+}
+function drawParticles(ctx){
+  state.particles = state.particles.filter(p => p.life > 0);
+  state.particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += (p.g === undefined ? 0.18 : p.g); p.life -= 0.02;
+    ctx.save(); ctx.globalAlpha = clamp(p.life, 0, 1);
+    if (p.type === 'tear'){ ctx.fillStyle = '#7FD4FF'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 4, 6, 0, 0, TAU); ctx.fill(); }
+    else if (p.type === 'crumb'){ ctx.fillStyle = '#FFE0A0'; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, TAU); ctx.fill(); }
+    else if (p.type === 'emoji'){ ctx.font = (p.size || 22) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.ch || '✨', p.x, p.y); }
+    ctx.restore();
+  });
+}
+function drawFeedItem(ctx){
+  const f = state.feed; if (!f || f.t >= 42) return;
+  const W = window.innerWidth, H = window.innerHeight, m = getMouthWorld();
+  const p = f.t / 42;
+  const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+  const sx = W * 0.5, sy = H * 0.92;
+  const x = lerp(sx, m.x, ease);
+  const y = lerp(sy, m.y, ease) - Math.sin(p * Math.PI) * H * 0.12;
+  const sz = Math.min(W, H) * 0.09 * (1 - clamp((p - 0.88) / 0.12, 0, 1) * 0.5);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(f.t * 0.15) * 0.3);
+  ctx.font = sz + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(f.food.emoji, 0, 0);
+  ctx.restore();
+}
+function renderFx(){
+  const W = window.innerWidth, H = window.innerHeight;
+  fxc.save();
+  if (mini && mini.shake > 0) fxc.translate(rand(-mini.shake, mini.shake), rand(-mini.shake, mini.shake));
+  fxc.clearRect(-40, -40, W + 80, H + 80);
+  // 小游戏时轻微压暗背景，让掉落物更醒目
+  if (mini){ fxc.fillStyle = 'rgba(10,14,34,0.22)'; fxc.fillRect(0, 0, W, H); }
+  // 喂食压暗背景
+  if (state.feed){ const a = 0.18 + Math.min(state.feed.t / 36, 1) * 0.42; fxc.fillStyle = `rgba(10,14,34,${a})`; fxc.fillRect(0, 0, W, H); }
+  if (mini) drawMiniItems(fxc);
+  else drawFeedItem(fxc);
+  drawParticles(fxc);
+  fxc.restore();
+}
+
+/* ===================== 交互 ===================== */
+function setAnim(name, face){ dragon.anim = name; dragon.animT = 0; if (face) dragon.face = face; }
+function recordCount(key){
+  state.taskProgress[key] = (state.taskProgress[key] || 0) + 1;
+  const task = TASKS.find(t => t.key === key);
+  if (task && state.taskProgress[key] >= task.target && !save.tasks[key]){
+    save.tasks[key] = true; save.coins += task.reward; document.getElementById('coinDisplay').textContent = save.coins;
+    showToast('任务完成：' + task.title + ' +' + task.reward + '🪙'); levelUpSound();
+  }
+  persist();
+}
+function showHint(t){ document.getElementById('hintText').textContent = t; }
+function showToast(t){ const el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1800); }
+function showPanel(id){ document.getElementById(id).classList.add('active'); }
+function closePanel(id){ document.getElementById(id).classList.remove('active'); }
+
+/* ===================== 反应变化：随机台词 + 连击彩蛋 ===================== */
+const REACT = {
+  head:  ['摸摸头～', '喜欢被摸头！', '头好舒服呀～'],
+  belly: ['奶龙笑得捧住肚子啦！', '肚子痒痒的！', '哈哈肚子软乎乎～'],
+  hand:  ['挥手手～', '你好呀朋友！', '来击个掌！'],
+  foot:  ['蹦起来啦！', '跳跳更健康！', '嗷！蹦高高～'],
+  poke:  ['戳一戳！', '轻轻戳一下～', '欸！别戳啦！'],
+  laugh: ['哈哈哈哈！奶龙捧腹大笑！', '笑得停不下来！', '嘻嘻嘻～'],
+  wave:  ['你好呀～', '很高兴见到你！', '招手打招呼～'],
+  feed:  ['来喽～奶龙张嘴等吃的！', '好饿好饿～', '开饭啦！']
+};
+const EGG = {
+  poke:  '奶龙被你戳烦了，捂住脸！',
+  laugh: '奶龙笑到喘不过气！',
+  wave:  '奶龙挥手挥到手酸～',
+  head:  '奶龙被摸头摸到害羞～',
+  belly: '奶龙肚子被戳笑抽了！',
+  foot:  '奶龙蹦累了瘫在地上～',
+  feed:  '奶龙吃太撑，打了个饱嗝！'
+};
+let _combo = { act: '', n: 0 };
+function react(act, face, anim, soundFn){
+  _combo = (_combo.act === act) ? { act, n: _combo.n + 1 } : { act, n: 1 };
+  setAnim(anim, face);
+  if (soundFn) soundFn();
+  if (_combo.n >= 4 && EGG[act]){ showHint(EGG[act]); _combo.n = 0; return; }
+  const arr = REACT[act] || ['好耶！'];
+  showHint(arr[Math.floor(Math.random() * arr.length)]);
+}
+
+/* ===================== 设置（音效 / 低性能 / 全屏） ===================== */
+function applySettings(){
+  renderer.shadowMap.enabled = !settings.lowPerf;
+  renderer.setPixelRatio(settings.lowPerf ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+  window.__lowPerf = settings.lowPerf;
+}
+function initSettings(){
+  const tgS = document.getElementById('tgSound'), tgP = document.getElementById('tgPerf');
+  const sync = () => { tgS.classList.toggle('on', settings.sound); tgP.classList.toggle('on', settings.lowPerf); };
+  sync();
+  tgS.addEventListener('click', () => { settings.sound = !settings.sound; if (settings.sound) popSound(); persist(); sync(); });
+  tgP.addEventListener('click', () => { settings.lowPerf = !settings.lowPerf; persist(); sync(); applySettings(); showToast(settings.lowPerf ? '已开启低性能模式' : '已关闭低性能模式'); });
+  document.getElementById('btnSettings').addEventListener('click', () => showPanel('settingsPanel'));
+  document.getElementById('btnFullscreen').addEventListener('click', () => {
+    if (!document.fullscreenElement){ const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el); }
+    else { (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document); }
+  });
+  // 引导按钮
+  document.getElementById('guideSkip').addEventListener('click', endGuidance);
+  document.getElementById('guideNext').addEventListener('click', () => { if (_guideIdx >= GUIDE_STEPS.length - 1) endGuidance(); else { _guideIdx++; renderGuide(); } });
+  applySettings();
+}
+
+/* ===================== 新手引导（可跳过） ===================== */
+const GUIDE_STEPS = [
+  { emoji: '🐲', title: '欢迎来到会说话的奶龙', text: '这是一只可爱的 3D 奶龙，会陪你聊天、玩耍、换装。先用手指或鼠标戳戳它吧！' },
+  { emoji: '👆', title: '怎么互动', text: '直接点角色的头、肚子、小手或小脚，奶龙会有不同反应。底部按钮可以说话、打招呼、大笑、戳一戳和喂食。' },
+  { emoji: '🪙', title: '赚金币换皮肤', text: '每次互动都能赚金币，完成「挑战任务」奖励更多；去👕衣橱用金币解锁草莓粉、薄荷绿、星空紫等酷炫皮肤！' },
+  { emoji: '🍚', title: '照顾奶龙', text: '左上角三条状态：饱腹🍚 / 心情😊 / 精力⚡。喂食涨饱腹、玩闹涨心情、😴休息回精力；状态太低奶龙会蔫蔫的哦。' },
+  { emoji: '🎮', title: '玩局小游戏', text: '点右上角🎮玩「接食物」：拖动奶龙或按 ← → 接住掉落的食物、躲开石头炸弹，40 秒冲高分换金币。随时点🌇换场景、⚙改设置，祝你玩得开心！' }
+];
+let _guideIdx = 0;
+function renderGuide(){
+  const s = GUIDE_STEPS[_guideIdx];
+  document.getElementById('guideEmoji').textContent = s.emoji;
+  document.getElementById('guideTitle').textContent = s.title;
+  document.getElementById('guideText').textContent = s.text;
+  document.getElementById('guideDots').innerHTML = GUIDE_STEPS.map((_, i) => `<span class="${i === _guideIdx ? 'on' : ''}"></span>`).join('');
+  document.getElementById('guideNext').textContent = (_guideIdx === GUIDE_STEPS.length - 1) ? '开始玩' : '下一步';
+}
+function startGuidance(){ if (save.tutorialDone) return; document.getElementById('guide').classList.add('active'); _guideIdx = 0; renderGuide(); }
+function endGuidance(){ document.getElementById('guide').classList.remove('active'); save.tutorialDone = true; persist(); }
+
+function triggerHead(){ recordCount('head'); gainCoins(1); addStat('mood', 3); addStat('energy', -1); react('head', 'happy', 'nod', popSound); }
+function triggerBelly(){ recordCount('belly'); gainCoins(1); addStat('mood', 6); addStat('energy', -4); react('belly', 'laugh', 'laugh', () => playLaughClip(2)); spawnTears(); }
+function triggerHand(){ recordCount('wave'); gainCoins(1); addStat('mood', 3); addStat('energy', -1); react('hand', 'happy', 'wave', popSound); }
+function triggerFoot(){ recordCount('jump'); gainCoins(1); addStat('mood', 3); addStat('energy', -4); react('foot', 'surprise', 'jump', popSound); }
+function triggerPoke(){ recordCount('poke'); gainCoins(1); addStat('mood', 2); addStat('energy', -1); react('poke', 'surprise', 'wobble', popSound); }
+function triggerLaugh(){ recordCount('laugh'); gainCoins(1); addStat('mood', 6); addStat('energy', -4); react('laugh', 'laugh', 'laugh', () => playLaughClip(2)); spawnTears(); }
+function triggerWave(){ recordCount('wave'); gainCoins(1); addStat('mood', 3); addStat('energy', -1); react('wave', 'happy', 'wave', popSound); }
+function triggerFeed(){
+  if (state.feed || mini) return;
+  const food = FOODS[_feedIdx % FOODS.length]; _feedIdx++;
+  state.feed = { t: 0, food, eaten: false };
+  state.idle.sleeping = false;
+  recordCount('feed'); gainCoins(2);
+  addStat('full', 34); addStat('mood', 9); addStat('energy', 3);
+  react('feed', 'happy', 'eat', null);
+}
+
+/* ===================== 状态养成：HUD + 表现 ===================== */
+const _hudEls = {
+  full:   { bar: document.getElementById('barFull'),   box: document.getElementById('statFull') },
+  mood:   { bar: document.getElementById('barMood'),   box: document.getElementById('statMood') },
+  energy: { bar: document.getElementById('barEnergy'), box: document.getElementById('statEnergy') }
+};
+let _hudSkip = 0;
+function updateStatHud(force){
+  if (!force && (_hudSkip = (_hudSkip + 1) % 12) !== 0) return;
+  ['full', 'mood', 'energy'].forEach(k => {
+    const e = _hudEls[k]; if (!e || !e.bar) return;
+    e.bar.style.width = stats[k].toFixed(0) + '%';
+    if (e.box) e.box.classList.toggle('low', stats[k] < 25);
+  });
+}
+let _lastStatT = 0;
+function statTick(now){                     // 按真实时间衰减（睡眠/休息时回精力）
+  const dt = _lastStatT ? Math.min(0.12, Math.max(0, (now - _lastStatT) / 1000)) : 0.016;
+  _lastStatT = now;
+  stats.full   = clamp(stats.full   - STAT_DECAY.full   * dt, 0, 100);
+  stats.energy = clamp(stats.energy - STAT_DECAY.energy * dt, 0, 100);
+  stats.mood   = clamp(stats.mood   - STAT_DECAY.mood   * dt, 0, 100);
+  if (stats.full < 25 || stats.energy < 20) stats.mood = clamp(stats.mood - 0.10 * dt, 0, 100);
+  if (state.idle.sleeping || dragon.anim === 'sleep') stats.energy = clamp(stats.energy + 3.0 * dt, 0, 100);
+}
+/* 状态台词：低状态时偶尔提醒玩家 */
+let _statHintT = 0;
+function statHintTick(){
+  _statHintT++;
+  if (mini || state.feed) return;
+  if (stats.full < 22 && _statHintT % 420 === 0){ showHint('奶龙肚子咕咕叫了，喂点吃的吧～🍌'); spawnFoodCue(); }
+  else if (stats.energy < 20 && _statHintT % 420 === 180){ showHint('奶龙困得直打哈欠…让它休息一下吧 😴'); spawnZzz(); }
+  else if (stats.mood < 22 && _statHintT % 420 === 300){ showHint('奶龙有点闷闷不乐，陪它玩一会儿吧～'); }
+  else if (stats.full < 32 && _statHintT % 240 === 0){ spawnFoodCue(); }
+}
+function spawnZzz(){
+  if (window.__lowPerf || !dragon3d) return;
+  const d = dragonScreen();
+  const s = Math.min(window.innerWidth, window.innerHeight);
+  for (let i = 0; i < 3; i++) state.particles.push({ x: d.x + rand(10, 70), y: d.y - s * 0.16 + rand(-14, 14), vx: rand(-0.25, 0.75), vy: rand(-1.0, -0.4), life: 1, type: 'emoji', ch: '💤', size: s * 0.045 });
+}
+function spawnFoodCue(){
+  if (window.__lowPerf || !dragon3d) return;
+  const d = dragonScreen();
+  const s = Math.min(window.innerWidth, window.innerHeight);
+  state.particles.push({ x: d.x + rand(-70, 70), y: d.y - s * 0.28, vx: rand(-0.3, 0.3), vy: rand(-0.5, -0.2), life: 1, type: 'emoji', ch: '🍌', size: s * 0.075 });
+}
+function triggerRest(){
+  if (state.feed || mini) return;
+  recordCount('rest');
+  setAnim('sleep', 'sleep');
+  addStat('energy', 30); addStat('mood', 6); addStat('full', -4);
+  spawnZzz(); popSound();
+  showHint('奶龙休息一会儿，精力回来啦～');
+}
+
+/* ===================== 小游戏：接食物 ===================== */
+const MINI_DUR = 40;                                   // 每局秒数
+const MINI_BAD = ['🪨', '💣', '🌶️'];
+function visibleHalfWidth(){                            // z=0 处相机可见半宽
+  const h = Math.tan((camera.fov * Math.PI / 180) / 2) * camera.position.z;
+  return Math.max(0.5, h * camera.aspect);
+}
+function miniCamZ(){                                    // 小游戏相机距离：窄屏自动后退，保证有横移空间
+  const a = Math.max(0.2, camera.aspect || 1);
+  const t = Math.tan((camera.fov * Math.PI / 180) / 2);
+  return Math.max(5.3, 1.95 / (t * a));
+}
+function miniRange(){ return Math.max(0.3, visibleHalfWidth() - 0.78); }   // 奶龙横移范围（世界单位）
+function _dragonBodyY(){ return (typeof GROUND_Y === 'number' ? GROUND_Y : -1.3) + 0.95; }
+function dragonScreen(){                                // 奶龙身体中心的屏幕坐标
+  const wx = mini ? mini.dx * miniRange() : 0;
+  _sv.set(wx, _dragonBodyY(), 0.1).project(camera);
+  return { x: (_sv.x * 0.5 + 0.5) * window.innerWidth, y: (-_sv.y * 0.5 + 0.5) * window.innerHeight, wx };
+}
+function miniSpawnX(){                                  // 掉落物横向生成区间 = 奶龙可达范围（保证接得到）
+  const r = miniRange();
+  _sv.set(-r, _dragonBodyY(), 0.1).project(camera);
+  const a = (_sv.x * 0.5 + 0.5) * window.innerWidth;
+  _sv.set(r, _dragonBodyY(), 0.1).project(camera);
+  const b = (_sv.x * 0.5 + 0.5) * window.innerWidth;
+  const pad = Math.min(window.innerWidth, window.innerHeight) * 0.04;
+  return { lo: Math.min(a, b) + pad, hi: Math.max(a, b) - pad };
+}
+function openMiniPanel(){ showPanel('miniPanel'); }
+function showMiniTip(t){
+  const el = document.getElementById('miniTipText');
+  if (!el) return;
+  el.textContent = t;
+  clearTimeout(showMiniTip._t);
+  showMiniTip._t = setTimeout(() => { if (el) el.textContent = '拖动奶龙 / 按 ← → 移动'; }, 1600);
+}
+function startMini(){
+  closePanel('miniPanel'); closePanel('miniOver');
+  if (mini) return;
+  if (state.feed){ state.feed = null; }
+  mini = { phase: 'count', count: 190, t: 0, time: MINI_DUR * 60, score: 0, life: 3,
+           items: [], spawn: 90, dx: 0, tx: 0, drag: false, keyL: false, keyR: false, shake: 0 };
+  document.body.classList.add('mini');
+  document.getElementById('miniHud').classList.add('on');
+  document.getElementById('miniTip').classList.add('on');
+  document.getElementById('miniScore').textContent = '0';
+  document.getElementById('miniLife').textContent = '3';
+  document.getElementById('miniTime').textContent = MINI_DUR;
+  const el = document.getElementById('miniCount'); el.querySelector('b').textContent = '3'; el.classList.add('on');
+  state.idle.sleeping = false; dragon.face = 'happy';
+  showMiniTip('拖动奶龙 / 按 ← → 移动');
+}
+function miniCountdown(){
+  const el = document.getElementById('miniCount'), b = el.querySelector('b');
+  mini.count--;
+  if (mini.count > 0){
+    const txt = String(Math.ceil(mini.count / 60));
+    if (b.textContent !== txt) b.textContent = txt;
+  } else { el.classList.remove('on'); mini.phase = 'play'; popSound(); }
+}
+function drawMiniItems(ctx){
+  if (!mini) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  const dz = dragonScreen();
+  if (mini.phase === 'play'){
+    const r = Math.min(W, H) * 0.14;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 3; ctx.setLineDash([12, 9]);
+    ctx.beginPath(); ctx.moveTo(dz.x - r, dz.y + Math.min(W, H) * 0.10); ctx.lineTo(dz.x + r, dz.y + Math.min(W, H) * 0.10); ctx.stroke();
+    ctx.restore();
+  }
+  const sz = Math.min(W, H) * 0.085;
+  ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = sz + 'px serif';
+  mini.items.forEach(it => {
+    ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot);
+    ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
+    ctx.fillText(it.emoji, 0, 0);
+    ctx.restore();
+  });
+  ctx.restore();
+}
+function miniUpdate(){
+  if (!mini) return;
+  if (mini.phase === 'count'){ miniCountdown(); return; }
+  const W = window.innerWidth, H = window.innerHeight;
+  const S = Math.min(W, H);
+  mini.t++;
+  mini.time--;
+
+  if (mini.keyL) mini.tx -= 0.030;
+  if (mini.keyR) mini.tx += 0.030;
+  mini.tx = clamp(mini.tx, -1, 1);
+  mini.dx += (mini.tx - mini.dx) * 0.22;
+
+  // 生成掉落物
+  if (--mini.spawn <= 0){
+    const prog = mini.t / (MINI_DUR * 60);
+    mini.spawn = Math.max(20, Math.round(rand(36, 54) - prog * 16));
+    const bad = Math.random() < 0.26;
+    const bx = miniSpawnX();
+    mini.items.push({
+      x: bx.lo + Math.max(0, bx.hi - bx.lo) * Math.random(), y: -S * 0.08,
+      v: (H * rand(0.42, 0.58) / 60) * (1 + prog * 0.75),
+      emoji: bad ? MINI_BAD[(Math.random() * MINI_BAD.length) | 0] : FOODS[(Math.random() * FOODS.length) | 0].emoji,
+      bad, rot: rand(-0.3, 0.3)
+    });
+  }
+
+  const dz = dragonScreen();
+  for (let i = mini.items.length - 1; i >= 0; i--){
+    const it = mini.items[i];
+    it.y += it.v; it.rot += 0.02;
+    if (Math.abs(it.y - dz.y) < S * 0.11 && Math.abs(it.x - dz.x) < S * 0.14){
+      mini.items.splice(i, 1);
+      if (it.bad){ mini.life--; mini.shake = 14; popSound(); showMiniTip('哎呀！吃到坏的啦 −1 ❤️'); }
+      else { mini.score += 10; addStat('mood', 0.8); recordCount('catch'); popSound(); document.getElementById('miniScore').textContent = mini.score; }
+      continue;
+    }
+    if (it.y > H + S * 0.1){
+      mini.items.splice(i, 1);
+      if (!it.bad) addStat('mood', -0.2);
+    }
+  }
+  if (mini.shake > 0) mini.shake--;
+
+  document.getElementById('miniScore').textContent = mini.score;
+  document.getElementById('miniLife').textContent = Math.max(0, mini.life);
+  document.getElementById('miniTime').textContent = Math.max(0, Math.ceil(mini.time / 60));
+
+  if (mini.life <= 0 || mini.time <= 0) endMini();
+}
+function endMini(){
+  if (!mini) return;
+  const score = mini.score, life = mini.life, timeout = mini.time <= 0;
+  mini = null;
+  document.body.classList.remove('mini');
+  document.getElementById('miniHud').classList.remove('on');
+  document.getElementById('miniTip').classList.remove('on');
+  document.getElementById('miniCount').classList.remove('on');
+  const coins = Math.max(5, Math.round(score * 0.35));
+  miniBest = Math.max(miniBest, score);
+  gainCoins(coins);
+  recordCount('minigame');
+  addStat('energy', -12); addStat('mood', 10);
+  persist();
+  document.getElementById('miniScoreVal').textContent = score;
+  document.getElementById('miniCoinVal').textContent = coins;
+  document.getElementById('miniBestVal').textContent = miniBest;
+  showHint(timeout ? '时间到啦！' : '生命用完啦！');
+  showPanel('miniOver'); levelUpSound();
+}
+
+/* 点击角色部位 */
+function hitTest(cx, cy){
+  const W = window.innerWidth, H = window.innerHeight;
+  const x = W * dragon.x, y = H * dragon.y, s = Math.min(W, H) * 0.42 * dragon.scale;
+  const dx = (cx - x) / s, dy = (cy - y) / s;
+  if (Math.abs(dx) > 1.1 || Math.abs(dy) > 1.2) return null;
+  if (dy < -0.3) return 'head';
+  if (dy > 0.55) return 'foot';
+  if (dx > 0.32) return 'handR';
+  if (dx < -0.32) return 'handL';
+  return 'belly';
+}
+function miniMoveTo(clientX){
+  if (!mini || mini.phase !== 'play') return;
+  mini.tx = clamp((clientX / window.innerWidth) * 2 - 1, -1, 1);
+}
+threeCanvas.addEventListener('pointerdown', e => {
+  state.idle.sleeping = false;
+  audio();
+  if (mini){ mini.drag = true; miniMoveTo(e.clientX); return; }
+  const r = hitTest(e.clientX, e.clientY);
+  if (r === 'head') triggerHead();
+  else if (r === 'belly') triggerBelly();
+  else if (r === 'handL' || r === 'handR') triggerHand();
+  else if (r === 'foot') triggerFoot();
+});
+window.addEventListener('pointermove', e => { if (mini && mini.drag) miniMoveTo(e.clientX); });
+window.addEventListener('keydown', e => {
+  if (!mini) return;
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ mini.keyL = true; e.preventDefault(); }
+  if (k === 'ArrowRight' || k === 'd' || k === 'D'){ mini.keyR = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => {
+  if (!mini) return;
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') mini.keyL = false;
+  if (k === 'ArrowRight' || k === 'd' || k === 'D') mini.keyR = false;
+});
+
+/* 录音变声 */
+let mediaRecorder = null, chunks = [], audioEl = null;
+const micBtn = document.getElementById('micBtn');
+micBtn.addEventListener('pointerdown', async e => {
+  e.preventDefault(); audio();
+  if (state.recording) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    chunks = [];
+    mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const url = URL.createObjectURL(blob);
+      if (audioEl) audioEl.pause();
+      audioEl = new Audio(url); audioEl.playbackRate = 1.5;
+      audioEl.play().catch(() => {});
+      stream.getTracks().forEach(t => t.stop());
+      setAnim('talk', 'talk'); showHint('奶龙奶声奶气地学你说话～'); recordCount('speak');
+      setTimeout(() => { if (dragon.anim === 'talk'){ dragon.anim = 'idle'; dragon.face = 'happy'; } }, 1500);
+    };
+    mediaRecorder.start(); state.recording = true; micBtn.classList.add('recording');
+    document.getElementById('permissionMsg').style.display = 'block';
+    showHint('正在听你说，松开按钮后奶龙会学你～');
+  } catch (err){ document.getElementById('permissionMsg').style.display = 'block'; }
+});
+window.addEventListener('pointerup', () => {
+  if (mini) mini.drag = false;
+  if (state.recording && mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); state.recording = false; micBtn.classList.remove('recording'); document.getElementById('permissionMsg').style.display = 'none'; }
+});
+
+/* 按钮 */
+document.getElementById('laughBtn').addEventListener('click', triggerLaugh);
+document.getElementById('waveBtn').addEventListener('click', triggerWave);
+document.getElementById('pokeBtn').addEventListener('click', triggerPoke);
+document.getElementById('feedBtn').addEventListener('click', triggerFeed);
+document.getElementById('restBtn').addEventListener('click', triggerRest);
+document.getElementById('btnMini').addEventListener('click', openMiniPanel);
+document.getElementById('miniStart').addEventListener('click', startMini);
+document.getElementById('miniAgain').addEventListener('click', startMini);
+document.getElementById('btnShop').addEventListener('click', () => { showPanel('shopPanel'); renderShop(); });
+document.getElementById('btnTasks').addEventListener('click', () => { showPanel('taskPanel'); renderTasks(); });
+document.getElementById('btnScene').addEventListener('click', () => {
+  state.scene = (state.scene + 1) % THEMES.length; persist(); applyTheme(state.scene); popSound();
+  recordCount('scene');
+  showHint('场景：' + THEMES[state.scene].name);
+});
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closePanel(b.dataset.close)));
+
+/* 商城 / 任务 */
+function renderShop(){
+  const grid = document.getElementById('skinGrid'); grid.innerHTML = '';
+  SKINS.forEach(sk => {
+    const owned = save.owned.includes(sk.id);
+    const cur = state.currentSkin === sk.id;
+    const el = document.createElement('div');
+    el.className = 'skinItem' + (owned ? ' owned' : '') + (cur ? ' current' : '');
+    el.innerHTML = `<div class="swatch" style="background:${sk.body[1]}"></div><div class="skinName">${sk.name}</div>` +
+      (owned ? `<div class="skinPrice">${cur ? '使用中' : '点击穿上'}</div>` : `<div class="skinPrice">🪙 ${sk.price}</div><div class="lock">🔒</div>`);
+    el.addEventListener('click', () => {
+      if (owned){ state.currentSkin = sk.id; applySkin(sk); persist(); popSound(); showHint('换上了 ' + sk.name + '！'); renderShop(); }
+      else if (save.coins >= sk.price){
+        save.coins -= sk.price; save.owned.push(sk.id); state.currentSkin = sk.id; applySkin(sk); persist();
+        document.getElementById('coinDisplay').textContent = save.coins;
+        recordCount('skinChange'); levelUpSound(); showHint('解锁并穿上 ' + sk.name + '！'); renderShop();
+      } else { showToast('金币不够啦～'); }
+    });
+    grid.appendChild(el);
+  });
+}
+function renderTasks(){
+  const list = document.getElementById('taskList'); list.innerHTML = '';
+  TASKS.forEach(t => {
+    const done = !!save.tasks[t.key] || (state.taskProgress[t.key] || 0) >= t.target;
+    const prog = Math.min(state.taskProgress[t.key] || 0, t.target);
+    const el = document.createElement('div'); el.className = 'taskItem' + (done ? ' done' : '');
+    el.innerHTML = `<div class="taskInfo"><div class="taskTitle">${t.title}</div><div class="taskDesc">${t.desc}${done ? '' : `（${prog}/${t.target}）`}</div></div><div class="taskReward">+${t.reward}🪙</div>${done ? '<div class="taskCheck">✓</div>' : ''}`;
+    list.appendChild(el);
+  });
+}
+
+/* ===================== 主循环 ===================== */
+function loop(){
+  const now = Date.now();
+  dragon.animT = (dragon.animT || 0) + 1;
+  if (state.blinkT > 0) state.blinkT--;
+  else if (Math.random() < 0.006) state.blinkT = 8;
+
+  // 状态养成：衰减 + 提示
+  statTick(now);
+  statHintTick();
+
+  // 小游戏：镜头按屏幕宽高比自适应后退，保证左右有横移空间
+  const wantZ = mini ? miniCamZ() : 5.3;
+  if (Math.abs(camera.position.z - wantZ) > 0.005){
+    camera.position.z += (wantZ - camera.position.z) * 0.10;
+    if (Math.abs(camera.position.z - wantZ) < 0.01) camera.position.z = wantZ;
+    camera.lookAt(0, 0.1, 0);
+  }
+
+  // 小游戏
+  if (mini) miniUpdate();
+
+  // 喂食时间线
+  if (state.feed){
+    const f = state.feed; f.t++;
+    dragon.anim = 'eat'; dragon.face = 'happy';
+    if (f.t === 42 && !f.eaten){ f.eaten = true; eatSound(); spawnCrumbs(); showHint('啊呜——！'); }
+    if (f.t === 82){ showHint('嗷呜～真香！'); const m = getMouthWorld(); addCoins(3, m.x, m.y); }
+    if (f.t > 96){ state.feed = null; dragon.anim = 'idle'; dragon.animT = 0; dragon.face = 'happy'; }
+  }
+
+  // 闲置睡眠（精力越低越容易犯困）
+  if (mini) state.idle.t = 0; else state.idle.t++;
+  if (!state.feed && !mini && dragon.anim === 'idle'){
+    const sleepAt = stats.energy < 25 ? 330 : 900;
+    if (state.idle.t > sleepAt && !state.idle.sleeping){ state.idle.sleeping = true; dragon.face = 'sleep'; }
+    else if (!state.idle.sleeping){ dragon.face = 'happy'; }
+  }
+  if (state.idle.sleeping && (dragon.anim !== 'idle' || state.feed)){ state.idle.sleeping = false; state.idle.t = 0; }
+
+  // 自动结束短动画
+  const dur = { nod: 45, jump: 60, wave: 90, shake: 70, laugh: 130, wobble: 50, spin: 90, eat: 70, sleep: 200 }[dragon.anim] || 0;
+  if (dur && dragon.animT > dur && !state.feed){
+    dragon.anim = 'idle'; dragon.animT = 0;
+    dragon.face = state.idle.sleeping ? 'sleep' : 'happy';
+  }
+
+  updateDragon(now);
+  renderer.render(scene, camera);
+  renderFx();
+  updateStatHud();
+  requestAnimationFrame(loop);
+}
+
+/* ===================== 启动 ===================== */
+function fail(msg){
+  const el = document.getElementById('loading');
+  if (el){ el.style.display = 'flex'; el.style.flexDirection = 'column'; el.style.padding = '24px';
+    el.style.textAlign = 'center'; el.style.color = '#b00'; el.style.fontSize = '15px'; el.style.lineHeight = '1.6';
+    el.innerHTML = '加载失败：' + msg + '<br><br>请用较新版本的 Chrome / Edge / Safari 打开，并确认已开启 WebGL。<br><button id="retryBtn" style="margin-top:16px;padding:10px 22px;border:none;border-radius:12px;background:#FF9F1C;color:#fff;font-weight:700;font-size:15px;cursor:pointer;">重新加载</button>';
+    const rb = document.getElementById('retryBtn'); if (rb) rb.onclick = () => location.reload(); }
+}
+try {
+  if (typeof THREE === 'undefined') throw new Error('Three.js 未加载');
+  const test = document.createElement('canvas');
+  if (!(test.getContext('webgl') || test.getContext('experimental-webgl'))) throw new Error('当前浏览器/环境不支持 WebGL');
+  resize();
+  applyTheme(state.scene);
+  applySkin(skin());
+  document.getElementById('coinDisplay').textContent = save.coins;
+  document.getElementById('loading').style.display = 'none';
+  loop();
+} catch (err) {
+  console.error(err);
+  fail(err && err.message ? err.message : String(err));
+}
+
+// 调试导出
+window.__diag = () => ({
+  three: !!THREE, dragon: !!dragon3d, anim: dragon.anim, face: dragon.face, feed: !!state.feed,
+  stats: { full: +stats.full.toFixed(1), mood: +stats.mood.toFixed(1), energy: +stats.energy.toFixed(1) },
+  mini: mini ? { phase: mini.phase, score: mini.score, life: mini.life, time: mini.time, count: mini.count, items: mini.items.length, dx: +mini.dx.toFixed(3), tx: +mini.tx.toFixed(3) } : null,
+  dragonX: +dragon3d.position.x.toFixed(3),
+  dragonScreenX: Math.round(dragonScreen().x), viewW: window.innerWidth, viewH: window.innerHeight,
+  camZ: +camera.position.z.toFixed(2), miniRange: +miniRange().toFixed(2),
+  hud: { full: document.getElementById('barFull').style.width, mood: document.getElementById('barMood').style.width, energy: document.getElementById('barEnergy').style.width,
+         low: { full: document.getElementById('statFull').classList.contains('low'), mood: document.getElementById('statMood').classList.contains('low'), energy: document.getElementById('statEnergy').classList.contains('low') } },
+  miniHudOn: document.getElementById('miniHud').classList.contains('on'),
+  miniHudTxt: document.getElementById('miniScore').textContent + '/' + document.getElementById('miniTime').textContent + '/' + document.getElementById('miniLife').textContent,
+  taskCount: TASKS.length
+});
+window.__triggers = { laugh: triggerLaugh, feed: triggerFeed, poke: triggerPoke, wave: triggerWave, head: triggerHead, belly: triggerBelly, hand: triggerHand, foot: triggerFoot, scene: () => { state.scene = (state.scene + 1) % THEMES.length; applyTheme(state.scene); }, skin: (id) => { const s = SKINS.find(x => x.id === id); if (s){ state.currentSkin = id; applySkin(s); } },
+  rest: triggerRest,
+  mini: startMini,
+  miniEnd: () => { endMini(); return true; },
+  miniMove: (v) => { if (mini) mini.tx = clamp(v, -1, 1); return mini ? mini.tx : null; },
+  miniItem: (nx, bad) => { if (mini){ mini.items.push({ x: nx * window.innerWidth, y: -20, v: window.innerHeight * 0.5 / 60, emoji: bad ? '💣' : '🍌', bad: !!bad, rot: 0 }); return true; } return false; },
+  setStats: (o) => { if (o) ['full', 'mood', 'energy'].forEach(k => { if (typeof o[k] === 'number') stats[k] = clamp(o[k], 0, 100); }); updateStatHud(true); return { full: stats.full, mood: stats.mood, energy: stats.energy }; },
+  statHud: () => { updateStatHud(true); return { full: stats.full, mood: stats.mood, energy: stats.energy }; } };
+</script>
+</body>
+</html>
