@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奶龙皮肤图鉴</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: linear-gradient(160deg, #FFF4D6 0%, #FFE3F0 45%, #E3F4FF 100%);
+    min-height: 100vh; color: #5a4632; padding: 28px 16px 60px;
+  }
+  header { text-align: center; margin-bottom: 22px; }
+  h1 { font-size: 30px; letter-spacing: 2px; color: #C98A00; text-shadow: 0 2px 0 #fff; }
+  .sub { margin-top: 8px; font-size: 14px; color: #9c8a6e; }
+  .coinbar {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+    background: #fff; padding: 8px 20px; border-radius: 999px; box-shadow: 0 4px 14px rgba(200,150,0,.18);
+    font-weight: 700; font-size: 18px; color: #E0A100;
+  }
+  .coinbar::before { content: "🪙"; font-size: 20px; }
+  .grid {
+    max-width: 980px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;
+  }
+  .card {
+    background: #fff; border-radius: 22px; padding: 18px 16px 16px; text-align: center;
+    box-shadow: 0 8px 22px rgba(180,140,60,.16); position: relative; overflow: hidden;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(180,140,60,.24); }
+  .card svg { width: 150px; height: 165px; display: block; margin: 0 auto 6px; }
+  .name { font-size: 18px; font-weight: 800; color: #6b5536; }
+  .price { margin-top: 6px; font-size: 14px; font-weight: 700; }
+  .badge {
+    position: absolute; top: 12px; right: 12px; font-size: 12px; font-weight: 800;
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .badge.owned { background: #E6F7EC; color: #1E9E54; }
+  .badge.buy { background: #FFF1D6; color: #C98A00; }
+  .badge.lock { background: #F0ECE6; color: #A99; }
+  .free { color: #1E9E54; }
+  .locked { color: #C98A00; }
+  footer { text-align: center; margin-top: 34px; }
+  .back {
+    display: inline-block; text-decoration: none; background: linear-gradient(135deg,#FFC93C,#FF9D3C);
+    color: #fff; font-weight: 800; padding: 12px 28px; border-radius: 999px; box-shadow: 0 6px 16px rgba(255,150,40,.4);
+  }
+  .back:hover { filter: brightness(1.05); }
+  .tip { margin-top: 14px; font-size: 13px; color: #9c8a6e; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐲 奶龙皮肤图鉴</h1>
+  <div class="sub">每个皮肤的真实配色与配饰预览 · 数据来自你的游戏存档</div>
+  <div class="coinbar" id="coinBar">0</div>
+</header>
+
+<main class="grid" id="grid"></main>
+
+<footer>
+  <a class="back" href="./index.html">← 返回游戏去解锁</a>
+  <div class="tip">提示：在游戏里做任务、戳一戳、喂食都能攒金币，攒够即可解锁对应皮肤。</div>
+</footer>
+
+<script>
+/* 与游戏 naitalking 完全一致的皮肤数据 */
+const SKINS = [
+  { id: 'classic',    name: '经典黄',   price: 0,   body: ['#FFE44D','#FFD100','#F5B800'], belly: ['#FFF8DC','#FFEBB7'], horn: '#FFE4B5', cheek: '#FF7782', accent: '#FFD100', costume: 'none'  },
+  { id: 'strawberry', name: '草莓粉',   price: 80,  body: ['#FFDCE8','#FFA8C4','#E07A9E'], belly: ['#FFE4EC','#FFC9D6'], horn: '#FFD1DC', cheek: '#FF6B8A', accent: '#FF4F8B', costume: 'bow'   },
+  { id: 'mint',       name: '薄荷绿',   price: 100, body: ['#E0FBE2','#9DE7AE','#5FB877'], belly: ['#E8FFF2','#C4F5DA'], horn: '#D1F2E0', cheek: '#FF8DA1', accent: '#2FBF73', costume: 'leaf'  },
+  { id: 'galaxy',     name: '星空紫',   price: 150, body: ['#E2D8FA','#B296F4','#6E52BC'], belly: ['#F3E5F5','#E1BEE7'], horn: '#E0D4FC', cheek: '#FF8DA1', accent: '#9B5CFF', costume: 'star'  },
+  { id: 'fire',       name: '火焰红',   price: 120, body: ['#FFDCB4','#FFA45C','#CE6B22'], belly: ['#FFEBEE','#FFCDD2'], horn: '#FFCCBC', cheek: '#FF6B6B', accent: '#FF3D2E', costume: 'flame' },
+  { id: 'gold',       name: '黄金限定', price: 300, body: ['#FFF6BC','#FFCE2E','#C08700'], belly: ['#FFF9C4','#FFF59D'], horn: '#FFE082', cheek: '#FFB74D', accent: '#FFC107', costume: 'crown' }
+];
+
+/* 头顶配饰 SVG */
+function costumeSVG(costume, accent){
+  switch(costume){
+    case 'crown':
+      return `<path d="M70 52 L78 26 L92 44 L100 22 L108 44 L122 26 L130 52 Z" fill="${accent}" stroke="#B8860B" stroke-width="2"/>
+              <circle cx="100" cy="40" r="4" fill="#FF5C8A"/>`;
+    case 'bow':
+      return `<path d="M100 50 L72 36 L72 64 Z" fill="${accent}"/>
+              <path d="M100 50 L128 36 L128 64 Z" fill="${accent}"/>
+              <circle cx="100" cy="50" r="9" fill="${accent}" stroke="#fff" stroke-width="2"/>`;
+    case 'leaf':
+      return `<path d="M100 52 C86 40 86 22 100 18 C114 22 114 40 100 52 Z" fill="${accent}" stroke="#1E8E4F" stroke-width="2"/>
+              <path d="M100 50 L100 24" stroke="#1E8E4F" stroke-width="2"/>`;
+    case 'star':
+      return `<path d="M100 20 L106 38 L126 38 L110 50 L116 68 L100 56 L84 68 L90 50 L74 38 L94 38 Z" fill="${accent}" stroke="#5E35B1" stroke-width="1.5"/>`;
+    case 'flame':
+      return `<path d="M100 54 C84 44 88 28 100 18 C112 28 116 44 100 54 Z" fill="${accent}"/>
+              <path d="M100 50 C93 44 95 36 100 31 C105 36 107 44 100 50 Z" fill="#FFD54F"/>`;
+    default: return '';
+  }
+}
+
+/* 生成一只奶龙头像 */
+function dragonSVG(sk){
+  const body = sk.body[1], belly = sk.belly[1], horn = sk.horn, cheek = sk.cheek, accent = sk.accent;
+  return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- 脚 -->
+    <ellipse cx="78" cy="178" rx="16" ry="11" fill="${body}"/>
+    <ellipse cx="122" cy="178" rx="16" ry="11" fill="${body}"/>
+    <!-- 身体 -->
+    <circle cx="100" cy="118" r="74" fill="${body}"/>
+    <!-- 肚皮 -->
+    <ellipse cx="100" cy="132" rx="44" ry="50" fill="${belly}"/>
+    <!-- 角 -->
+    <path d="M82 52 L74 30 L92 46 Z" fill="${horn}"/>
+    <path d="M118 52 L126 30 L108 46 Z" fill="${horn}"/>
+    <!-- 腮红 -->
+    <ellipse cx="64" cy="120" rx="13" ry="9" fill="${cheek}" opacity="0.75"/>
+    <ellipse cx="136" cy="120" rx="13" ry="9" fill="${cheek}" opacity="0.75"/>
+    <!-- 眼睛 -->
+    <circle cx="76" cy="104" r="19" fill="#fff"/>
+    <circle cx="124" cy="104" r="19" fill="#fff"/>
+    <circle cx="80" cy="106" r="9" fill="#3a2a1a"/>
+    <circle cx="120" cy="106" r="9" fill="#3a2a1a"/>
+    <circle cx="83" cy="103" r="3" fill="#fff"/>
+    <circle cx="123" cy="103" r="3" fill="#fff"/>
+    <!-- 嘴 -->
+    <path d="M88 138 Q100 148 112 138" stroke="#7a4a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- 配饰 -->
+    ${costumeSVG(sk.costume, accent)}
+  </svg>`;
+}
+
+/* 读游戏存档 */
+let save = { coins: 0, owned: ['classic'] };
+try {
+  const s = JSON.parse(localStorage.getItem('nailong3d_save_v1'));
+  if (s){ save.coins = s.coins || 0; save.owned = s.owned && s.owned.length ? s.owned : ['classic']; }
+} catch (e) {}
+
+document.getElementById('coinBar').textContent = save.coins;
+
+const grid = document.getElementById('grid');
+SKINS.forEach(sk => {
+  const owned = save.owned.includes(sk.id);
+  let badge, priceHtml;
+  if (owned){ badge = '<span class="badge owned">已拥有</span>'; priceHtml = '<div class="price free">已解锁</div>'; }
+  else if (save.coins >= sk.price){ badge = '<span class="badge buy">可购买</span>'; priceHtml = '<div class="price locked">🪙 ' + sk.price + '（回游戏解锁）</div>'; }
+  else { badge = '<span class="badge lock">未解锁</span>'; priceHtml = '<div class="price locked">🪙 ' + sk.price + '</div>'; }
+
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = badge + dragonSVG(sk) + '<div class="name">' + sk.name + '</div>' + priceHtml;
+  grid.appendChild(el);
+});
+</script>
+</body>
+</html>
