@@ -1,0 +1,9 @@
+# 构建产物：由 _build_glb.js 生成，可重建，不入库
+naitalking.html
+publish/
+
+# 截图与临时验证文件
+*.png
+*.jpg
+_shot.*
+_edge*
